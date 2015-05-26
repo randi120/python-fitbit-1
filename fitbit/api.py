@@ -263,6 +263,7 @@ class FitbitOauth2Client(object):
         """
         old_redirect = self.oauth.redirect_uri
         self.oauth.redirect_uri = redirect_uri
+        print self.auth_header
         self.token = self.oauth.fetch_token(self.access_token_url, headers=self.auth_header, code=code)
         self.oauth.redirect_uri = old_redirect
 
@@ -277,17 +278,18 @@ class FitbitOauth2Client(object):
 		#out  = self.oauth.refresh_token(self.refresh_token_url,
 								#refresh_token=self.token['refresh_token'],
 								#kwarg=self.auth_header)
-    
-    	body = self.oauth._client.prepare_refresh_body(
+   
+        auth = OAuth2Session(self.client_id)
+    	body = auth._client.prepare_refresh_body(
                           refresh_token=self.token['refresh_token'])
 
-        r = self.oauth.post(self.refresh_token_url, data=dict(urldecode(body)), 
+        r = auth.post(self.refresh_token_url, data=dict(urldecode(body)), 
 						  verify=True,headers=self.auth_header)
 
 		self.oauth._client.parse_request_body_response(r.text, scope=self.oauth.scope)
 		self.oauth.token = self.oauth._client.token
 		self.token = self.oath.token
-
+        
 		return(self.token)
 
 
