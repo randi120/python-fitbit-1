@@ -11,7 +11,8 @@ except ImportError:
     from urllib import urlencode
 
 from requests_oauthlib import OAuth1, OAuth1Session, OAuth2, OAuth2Session
-
+from oauthlib.oauth2 import TokenExpiredError
+from oauthlib.common import urldecode
 from fitbit.exceptions import (BadResponse, DeleteError, HTTPBadRequest,
                                HTTPUnauthorized, HTTPForbidden,
                                HTTPServerError, HTTPConflict, HTTPNotFound,
@@ -196,8 +197,14 @@ class FitbitOauth2Client(object):
         """
         if not method:
             method = 'POST' if data else 'GET'
-		auth = OAuth2(client_id=self.client_id, token=self.token)
-		response = self._request(method, url, data=data, auth=auth, **kwargs)
+            
+        try:
+            auth = OAuth2(client_id=self.client_id, token=self.token)
+            response = self._request(method, url, data=data, auth=auth, **kwargs)
+        except TokenExpiredError as e: 
+            self.refresh_token()
+            auth = OAuth2(client_id=self.client_id, token=self.token)
+            response = self._request(method, url, data=data, auth=auth, **kwargs)
 
         if response.status_code == 401:
             raise HTTPUnauthorized(response)
@@ -260,6 +267,29 @@ class FitbitOauth2Client(object):
         self.oauth.redirect_uri = old_redirect
 
         return self.token 
+
+    def refresh_token(self):
+        """Step 3: obtains a new access_token from the the refresh token 
+        obtained in step 2.	
+        """
+        ##the method in oauth does not allow a custom header (issue created #182)
+        ## in the mean time here is a limited version 
+		#out  = self.oauth.refresh_token(self.refresh_token_url,
+								#refresh_token=self.token['refresh_token'],
+								#kwarg=self.auth_header)
+    
+    	body = self.oauth._client.prepare_refresh_body(
+                          refresh_token=self.token['refresh_token'])
+
+        r = self.oauth.post(self.refresh_token_url, data=dict(urldecode(body)), 
+						  verify=True,headers=self.auth_header)
+
+		self.oauth._client.parse_request_body_response(r.text, scope=self.oauth.scope)
+		self.oauth.token = self.oauth._client.token
+		self.token = self.oath.token
+
+		return(self.token)
+
 
 
 
