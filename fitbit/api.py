@@ -172,10 +172,9 @@ class FitbitOauth2Client(object):
         self.client_secret = client_secret
         self.resource_owner_key = resource_owner_key
         self.resource_owner_secret = resource_owner_secret
-        self.header = {'Authorization': 'Basic ' + base64.b64encode(client_id +':' + client_secret)}
+        self.auth_header = {'Authorization': 'Basic ' + base64.b64encode(client_id +':' + client_secret)}
         if user_id:
             self.user_id = user_id
-
        #params = {'client_secret': client_secret}
        #if self.resource_owner_key and self.resource_owner_secret:
             #params['resource_owner_key'] = self.resource_owner_key
@@ -191,16 +190,14 @@ class FitbitOauth2Client(object):
 
     def make_request(self, url, data={}, method=None, **kwargs):
         """
-        Builds and makes the OAuth Request, catches errors
+        Builds and makes the OAuth2 Request, catches errors
 
         https://wiki.fitbit.com/display/API/API+Response+Format+And+Errors
         """
         if not method:
             method = 'POST' if data else 'GET'
-        auth = OAuth2(
-            self.client_id, self.client_secret, self.resource_owner_key,
-            self.resource_owner_secret, signature_type='auth_header')
-        response = self._request(method, url, data=data, auth=auth, **kwargs)
+		auth = OAuth2(client_id=self.client_id, token=self.token)
+		response = self._request(method, url, data=data, auth=auth, **kwargs)
 
         if response.status_code == 401:
             raise HTTPUnauthorized(response)
@@ -229,44 +226,40 @@ class FitbitOauth2Client(object):
             - scope: pemissions that that are being requested [default ask all]
             - redirect_uri: url to which the reponse will posted
                             required only if your app does not have one
-                TODO: check if you can give any url and grab code from it
             for more info see https://wiki.fitbit.com/display/API/OAuth+2.0
         """
-        
+       
+       	#the scope parameter is caussing some issues when refreshing tokens
+       	#so not saving it
+        old_scope = self.oauth.scope;
+        old_redirect = self.oauth.redirect_uri; 
         if scope:
            self.oauth.scope = scope
         else: 
-           #self.oauth.scope = {"heartrate", "location"} 
-           self.oauth.scope = "activity nutrition heartrate location nutrition profile settings sleep social weight"
+           self.oauth.scope ={"activity","nutrition","heartrate","location",
+           			"nutrition","profile","settings","sleep","social","weight"}
 
         if redirect_uri:
             self.oauth.redirect_uri = redirect_uri
-        
-        return self.oauth.authorization_url(self.authorization_url, **kwargs)
+       
 
-    def fetch_access_token(self, verifier, token=None):
-        """Step 3: Given the verifier from fitbit, and optionally a token from
-        step 1 (not necessary if using the same FitbitOAuthClient object) calls
+        out = self.oauth.authorization_url(self.authorization_url, **kwargs)
+        self.oauth.scope = old_scope
+        self.oauth.redirect_uri = old_redirect
+        return(out)
+
+    def fetch_access_token(self, code, redirect_uri):
+
+        """Step 2: Given the code from fitbit from step 1, call 
         fitbit again and returns an access token object. Extract the needed
         information from that and save it to use in future API calls.
         """
-        if token:
-            self.resource_owner_key = token.get('oauth_token')
-            self.resource_owner_secret = token.get('oauth_token_secret')
+        old_redirect = self.oauth.redirect_uri
+        self.oauth.redirect_uri = redirect_uri
+        self.token = self.oauth.fetch_token(self.access_token_url, headers=self.auth_header, code=code)
+        self.oauth.redirect_uri = old_redirect
 
-        self.oauth = OAuth2Session(
-            self.client_key,
-            client_secret=self.client_secret,
-            resource_owner_key=self.resource_owner_key,
-            resource_owner_secret=self.resource_owner_secret,
-            verifier=verifier)
-        response = self.oauth.fetch_access_token(self.access_token_url)
-
-        self.user_id = response.get('encoded_user_id')
-        self.resource_owner_key = response.get('oauth_token')
-        self.resource_owner_secret = response.get('oauth_token_secret')
-        return response
-
+        return self.token 
 
 
 
