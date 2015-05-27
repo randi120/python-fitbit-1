@@ -260,10 +260,10 @@ class FitbitOauth2Client(object):
         """Step 2: Given the code from fitbit from step 1, call 
         fitbit again and returns an access token object. Extract the needed
         information from that and save it to use in future API calls.
+        the token is internally saved
         """
         old_redirect = self.oauth.redirect_uri
         self.oauth.redirect_uri = redirect_uri
-        print self.auth_header
         self.token = self.oauth.fetch_token(self.access_token_url, headers=self.auth_header, code=code)
         self.oauth.redirect_uri = old_redirect
 
@@ -272,9 +272,10 @@ class FitbitOauth2Client(object):
     def refresh_token(self):
         """Step 3: obtains a new access_token from the the refresh token 
         obtained in step 2.	
+        the token is internally saved
         """
         ##the method in oauth does not allow a custom header (issue created #182)
-        ## in the mean time here is a limited version 
+        ## in the mean time here is a request from the ground up
 		#out  = self.oauth.refresh_token(self.refresh_token_url,
 								#refresh_token=self.token['refresh_token'],
 								#kwarg=self.auth_header)
@@ -286,11 +287,10 @@ class FitbitOauth2Client(object):
         r = auth.post(self.refresh_token_url, data=dict(urldecode(body)), 
 						  verify=True,headers=self.auth_header)
 
-		self.oauth._client.parse_request_body_response(r.text, scope=self.oauth.scope)
-		self.oauth.token = self.oauth._client.token
-		self.token = self.oath.token
-        
-		return(self.token)
+	auth._client.parse_request_body_response(r.text, scope=self.oauth.scope)
+	self.oauth.token = auth._client.token
+	self.token = auth._client.token
+	return(self.token)
 
 
 
