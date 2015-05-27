@@ -156,7 +156,6 @@ class FitbitOauth2Client(object):
 
     def __init__(self, client_id , client_secret, 
                 access_token=None, refresh_token=None,
-                resource_owner_key=None, resource_owner_secret=None, user_id=None, 
                 *args, **kwargs):
         """
         Create a FitbitOauth2Client object. Specify the first 7 parameters if
@@ -165,22 +164,16 @@ class FitbitOauth2Client(object):
             - client_id, client_secret are in the app configuration page
             https://dev.fitbit.com/apps
             - access_token, refresh_token are obtained after the user grants permission
-            - resource_owner_key, resource_owner_secret, user_id are user parameters 
         """
 
         self.session = requests.Session()
         self.client_id = client_id
         self.client_secret = client_secret
-        self.resource_owner_key = resource_owner_key
-        self.resource_owner_secret = resource_owner_secret
         self.auth_header = {'Authorization': 'Basic ' + base64.b64encode(client_id +':' + client_secret)}
-        if user_id:
-            self.user_id = user_id
-       #params = {'client_secret': client_secret}
-       #if self.resource_owner_key and self.resource_owner_secret:
-            #params['resource_owner_key'] = self.resource_owner_key
-            #params['resource_owner_secret'] = self.resource_owner_secret
-        #self.oauth = OAuth2Session(client_id, **params)
+
+        self.token = {'access_token' : access_token,
+                      'refresh_token': refresh_token}
+
         self.oauth = OAuth2Session(client_id)
 
     def _request(self, method, url, **kwargs):
@@ -321,10 +314,23 @@ class Fitbit(object):
         'frequent',
     ]
 
-    def __init__(self, client_key, client_secret, system=US, **kwargs):
-        self.client = FitbitOauthClient(client_key, client_secret, **kwargs)
+    def __init__(self, client_key=None, client_secret=None, client_id=None, system=US, **kwargs):
+        """
+            pleasse provide either client_key/client_secret to use OAuth1
+            pleasse provide either client_id/client_secret to use OAuth2
+            kwargs can be used to provide parameters: 
+            oath1: Fitbit(<key>, <secret>,resource_owner_key=<key>, resource_owner_secret=<key>)
+            oath2: Fitbit(client_id=<id>, <secret>,access_token=<token>, refresh_token=<token>)
+        """
         self.system = system
+        if not (client_key==None)^(client_id==None):
+            raise TypeError("Please specify either client_key (oauth1) or client_id (oauth2)")
 
+        if client_key:  
+            self.client = FitbitOauthClient(client_key, client_secret, **kwargs)
+        elif client_id: 
+            self.client = FitbitOauth2Client(client_id, client_secret, **kwargs)
+            
         # All of these use the same patterns, define the method for accessing
         # creating and deleting records once, and use curry to make individual
         # Methods for each
