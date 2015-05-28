@@ -194,22 +194,20 @@ class FitbitOauth2Client(object):
         try:
 			auth = OAuth2(client_id=self.client_id, token=self.token)
 			response = self._request(method, url, data=data, auth=auth, **kwargs)
-			print "r=" + response.text
         except TokenExpiredError as e: 
-			print "got token expired"
 			self.refresh_token()
 			auth = OAuth2(client_id=self.client_id, token=self.token)
 			response = self._request(method, url, data=data, auth=auth, **kwargs)
 
-		#yet another token expiration check
+		#yet another token expiration check 
+		#(the above try/except only applies if the expired token was obtained 
+		#using the current instance of the class this is a a general case)
         if response.status_code == 401:
 			d = json.loads(response.content.decode('utf8'))
-			print "got 401"
 			try:
 				if(d['errors'][0]['errorType']=='oauth' and 
 				d['errors'][0]['fieldName']=='access_token' and 
 				d['errors'][0]['message'].find('Access token invalid or expired:')==0):
-					print "token error"
 					self.refresh_token()
 					auth = OAuth2(client_id=self.client_id, token=self.token)
 					response = self._request(method, url, data=data, auth=auth, **kwargs)
