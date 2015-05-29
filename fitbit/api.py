@@ -338,13 +338,13 @@ class Fitbit(object):
             oath2: Fitbit(client_id=<id>, <secret>,access_token=<token>, refresh_token=<token>)
         """
         self.system = system
-        if not (client_key==None)^(client_id==None):
-            raise TypeError("Please specify either client_key (oauth1) or client_id (oauth2)")
 
-        if client_key:  
+        if (client_key is not None)  or kwargs.has_key('client_key'):  
             self.client = FitbitOauthClient(client_key, client_secret, **kwargs)
-        elif client_id: 
+        elif (client_id is not None) or kwargs.has_key('client_id'): 
             self.client = FitbitOauth2Client(client_id, client_secret, **kwargs)
+        else:
+            raise TypeError("Please specify either client_key (oauth1) or client_id (oauth2)") 
             
         # All of these use the same patterns, define the method for accessing
         # creating and deleting records once, and use curry to make individual
