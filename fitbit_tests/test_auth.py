@@ -1,7 +1,7 @@
 from unittest import TestCase
-from fitbit import Fitbit, FitbitOauthClient
+from fitbit import Fitbit, FitbitOauthClient, FitbitOauth2Client
 import mock
-from requests_oauthlib import OAuth1Session
+from requests_oauthlib import OAuth1Session, OAuth2Session
 
 class AuthTest(TestCase):
     """Add tests for auth part of API
@@ -33,6 +33,51 @@ class AuthTest(TestCase):
             self.assertEqual('FAKE_OAUTH_TOKEN_SECRET',
                              retval.get('oauth_token_secret'))
 
+    def test_authorize_token_url(self):
+        # authorize_token_url calls oauth and returns a URL
+        fb = Fitbit(**self.client_kwargs)
+        with mock.patch.object(OAuth1Session, 'authorization_url') as au:
+            au.return_value = 'FAKEURL'
+            retval = fb.client.authorize_token_url()
+            self.assertEqual(1, au.call_count)
+            self.assertEqual("FAKEURL", retval)
+
+    def test_authorize_token_url_with_parameters(self):
+        # authorize_token_url calls oauth and returns a URL
+        client = FitbitOauthClient(**self.client_kwargs)
+        retval = client.authorize_token_url(display="touch")
+        self.assertTrue("display=touch" in retval)
+
+    def test_fetch_access_token(self):
+        kwargs = self.client_kwargs
+        kwargs['resource_owner_key'] = ''
+        kwargs['resource_owner_secret'] = ''
+        fb = Fitbit(**kwargs)
+        fake_verifier = "FAKEVERIFIER"
+        with mock.patch.object(OAuth1Session, 'fetch_access_token') as fat:
+            fat.return_value = {
+                'encoded_user_id': 'FAKE_USER_ID',
+                'oauth_token': 'FAKE_RETURNED_KEY',
+                'oauth_token_secret': 'FAKE_RETURNED_SECRET'
+            }
+            retval = fb.client.fetch_access_token(fake_verifier)
+        self.assertEqual("FAKE_RETURNED_KEY", retval['oauth_token'])
+        self.assertEqual("FAKE_RETURNED_SECRET", retval['oauth_token_secret'])
+        self.assertEqual('FAKE_USER_ID', fb.client.user_id)
+
+
+class Auth2Test(TestCase):
+    """Add tests for auth part of API
+    mock the oauth library calls to simulate various responses,
+    make sure we call the right oauth calls, respond correctly based on the responses
+    """
+    client_kwargs = {
+        'client_id': '',
+        'client_secret': '',
+        'user_key': None,
+        'user_secret': None,
+        'callback_uri': 'CALLBACK_URL'
+    }
     def test_authorize_token_url(self):
         # authorize_token_url calls oauth and returns a URL
         fb = Fitbit(**self.client_kwargs)
