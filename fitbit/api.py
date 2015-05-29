@@ -283,21 +283,19 @@ class FitbitOauth2Client(object):
         """
         ##the method in oauth does not allow a custom header (issue created #182)
         ## in the mean time here is a request from the ground up
-		#out  = self.oauth.refresh_token(self.refresh_token_url,
-								#refresh_token=self.token['refresh_token'],
-								#kwarg=self.auth_header)
+        #out  = self.oauth.refresh_token(self.refresh_token_url,
+        #refresh_token=self.token['refresh_token'],
+        #kwarg=self.auth_header)
    
         auth = OAuth2Session(self.client_id)
-    	body = auth._client.prepare_refresh_body(
-                          refresh_token=self.token['refresh_token'])
+        body = auth._client.prepare_refresh_body(refresh_token=self.token['refresh_token'])
 
-        r = auth.post(self.refresh_token_url, data=dict(urldecode(body)), 
-						  verify=True,headers=self.auth_header)
+        r = auth.post(self.refresh_token_url, data=dict(urldecode(body)), verify=True,headers=self.auth_header)
 
-	auth._client.parse_request_body_response(r.text, scope=self.oauth.scope)
-	self.oauth.token = auth._client.token
-	self.token = auth._client.token
-	return(self.token)
+        auth._client.parse_request_body_response(r.text, scope=self.oauth.scope)
+        self.oauth.token = auth._client.token
+        self.token = auth._client.token
+        return(self.token)
 
 
 
