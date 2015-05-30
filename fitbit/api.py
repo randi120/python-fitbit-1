@@ -269,10 +269,8 @@ class FitbitOauth2Client(object):
         information from that and save it to use in future API calls.
         the token is internally saved
         """
-        old_redirect = self.oauth.redirect_uri
-        self.oauth.redirect_uri = redirect_uri
-        self.token = self.oauth.fetch_token(self.access_token_url, headers=self.auth_header, code=code)
-        self.oauth.redirect_uri = old_redirect
+        auth = OAuth2Session(self.client_id, redirect_uri=redirect_uri)
+        self.token = auth.fetch_token(self.access_token_url, headers=self.auth_header, code=code)
 
         return self.token 
 
@@ -289,9 +287,7 @@ class FitbitOauth2Client(object):
    
         auth = OAuth2Session(self.client_id)
         body = auth._client.prepare_refresh_body(refresh_token=self.token['refresh_token'])
-
         r = auth.post(self.refresh_token_url, data=dict(urldecode(body)), verify=True,headers=self.auth_header)
-
         auth._client.parse_request_body_response(r.text, scope=self.oauth.scope)
         self.oauth.token = auth._client.token
         self.token = auth._client.token
